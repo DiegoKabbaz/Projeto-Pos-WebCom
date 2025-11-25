@@ -112,3 +112,4 @@ Este projeto está configurado para rodar em GitHub Actions. Consulte `.github/w
 ## Autor
 
 Diego Altenkirch Kabbaz
+Glauber Souza Monteiro
