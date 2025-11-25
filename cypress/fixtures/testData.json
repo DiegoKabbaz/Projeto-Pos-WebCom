@@ -1,0 +1,25 @@
+{
+  "validUser": {
+    "name": "Test User",
+    "email": "testuser@webcom.com",
+    "password": "TestPassword123",
+    "firstName": "Test",
+    "lastName": "User",
+    "address": "123 Test Street",
+    "country": "United States",
+    "state": "California",
+    "city": "Los Angeles",
+    "zipcode": "90001",
+    "phone": "1234567890"
+  },
+  "invalidUser": {
+    "name": "Invalid User",
+    "email": "invalid@webcom.com",
+    "password": "123"
+  },
+  "products": {
+    "blueTop": "Blue Top",
+    "menTShirt": "Men T-Shirt",
+    "summerDress": "Summer Dress"
+  }
+}
