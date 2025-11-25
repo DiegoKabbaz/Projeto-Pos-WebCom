@@ -111,4 +111,4 @@ Este projeto está configurado para rodar em GitHub Actions. Consulte `.github/w
 
 ## Autor
 
-Manus AI - Projeto de Conclusão do Módulo de Testes de Software
+Diego Altenkirch Kabbaz
