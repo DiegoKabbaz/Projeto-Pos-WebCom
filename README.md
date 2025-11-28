@@ -114,4 +114,4 @@ Este projeto está configurado para rodar em GitHub Actions. Consulte `.github/w
 Diego Altenkirch Kabbaz
 Glauber Souza Monteiro
 Gustavo Augusto Ferreira de Lira
-
+Emmanoel felipe de Lima Barbosa
