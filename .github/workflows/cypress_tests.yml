@@ -27,8 +27,8 @@ jobs:
           spec: cypress/e2e/ui/*.cy.js
           browser: chrome
           headless: true
-          start: npm start # Se o projeto tivesse um servidor local
-          wait-on: 'http://localhost:3000' # Espera o servidor subir
+          start: npm test
+          wait-on: 'http://localhost:3000'
           
       - name: Run Cypress API Tests
         uses: cypress-io/github-action@v6
