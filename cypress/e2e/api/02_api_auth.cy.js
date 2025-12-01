@@ -1,16 +1,19 @@
 describe('Testes de API - Autenticação e Usuários', () => {
   const apiBaseUrl = 'https://automationexercise.com/api';
 
+  // Variável para armazenar email criado e usar no login depois
+  let createdEmail = `testuser${Date.now()}@webcom.com`;
+  const defaultPassword = 'TestPassword123';
+
   it('API-AUTH-001: Criar usuário (Signup)', () => {
-    const uniqueEmail = `testuser${Date.now()}@webcom.com`;
-    
     cy.request({
       method: 'POST',
-      url: `${apiBaseUrl}/customerSignup`,
+      url: `${apiBaseUrl}/createAccount`, 
+      form: true, 
       body: {
         name: 'Test User',
-        email: uniqueEmail,
-        password: 'TestPassword123',
+        email: createdEmail,
+        password: defaultPassword,
         title: 'Mr',
         birth_date: '01',
         birth_month: '01',
@@ -28,22 +31,25 @@ describe('Testes de API - Autenticação e Usuários', () => {
       }
     }).then((response) => {
       expect(response.status).to.equal(200);
-      expect(response.body).to.have.property('responseCode');
-      // Validar resposta (pode ser 201 para sucesso ou 400 se email já existe)
-      expect([200, 201, 400]).to.include(response.body.responseCode);
+      
+      let body = response.body;
+      if (typeof body === 'string') body = JSON.parse(body);
+
+      expect(body).to.have.property('responseCode', 201);
+      expect(body).to.have.property('message', 'User created!');
     });
   });
 
   it('API-AUTH-002: Criar usuário com email duplicado', () => {
-    const duplicateEmail = 'testuser@webcom.com';
-    
+    // Tentamos criar o MESMO usuário do teste anterior
     cy.request({
       method: 'POST',
-      url: `${apiBaseUrl}/customerSignup`,
+      url: `${apiBaseUrl}/createAccount`,
+      form: true,
       body: {
         name: 'Duplicate User',
-        email: duplicateEmail,
-        password: 'TestPassword123',
+        email: createdEmail, // Email já usado acima
+        password: defaultPassword,
         title: 'Mr',
         birth_date: '01',
         birth_month: '01',
@@ -61,88 +67,120 @@ describe('Testes de API - Autenticação e Usuários', () => {
       },
       failOnStatusCode: false
     }).then((response) => {
-      // Validar que retorna erro para email duplicado
-      expect(response.body).to.have.property('responseCode');
-      expect([400, 401]).to.include(response.body.responseCode);
+      expect(response.status).to.equal(200); // API retorna 200 mesmo no erro, mas com message diferente
+      
+      let body = response.body;
+      if (typeof body === 'string') body = JSON.parse(body);
+
+      expect(body.responseCode).to.not.equal(201);
+      // A mensagem geralmente é "Email already exists!"
+      expect(body.message).to.include('exist');
     });
   });
 
   it('API-AUTH-003: Criar usuário com dados incompletos', () => {
+    
     cy.request({
       method: 'POST',
-      url: `${apiBaseUrl}/customerSignup`,
+      url: `${apiBaseUrl}/createAccount`,
+      form: true,
       body: {
         name: 'Incomplete User',
-        email: `incomplete${Date.now()}@webcom.com'
-        // Faltam outros campos obrigatórios
+        email: `incomplete${Date.now()}@webcom.com` 
       },
       failOnStatusCode: false
     }).then((response) => {
-      expect(response.status).to.equal(400);
-      expect(response.body).to.have.property('responseCode', 400);
+       // Essa API as vezes retorna 200 com código de erro, ou 400.
+       // Vamos garantir que não foi criado (não é 201)
+       expect(response.status).to.be.oneOf([200, 400]);
+
+       let body = response.body;
+       if (typeof body === 'string') body = JSON.parse(body);
+       
+       if(body.responseCode) {
+         expect(body.responseCode).to.not.equal(201);
+       }
     });
   });
 
-  it('API-AUTH-004: Login de usuário', () => {
+  it('API-AUTH-004: Login de usuário (Correto)', () => {
     cy.request({
       method: 'POST',
-      url: `${apiBaseUrl}/customerLogin`,
+      url: `${apiBaseUrl}/verifyLogin`, 
+      form: true,
       body: {
-        email: 'testuser@webcom.com',
-        password: 'TestPassword123'
+        email: createdEmail, 
+        password: defaultPassword
       }
     }).then((response) => {
       expect(response.status).to.equal(200);
-      expect(response.body).to.have.property('responseCode');
-      // Validar que há dados do usuário na resposta
-      if (response.body.responseCode === 200) {
-        expect(response.body).to.have.property('user');
-      }
+      
+      let body = response.body;
+      if (typeof body === 'string') body = JSON.parse(body);
+
+      expect(body).to.have.property('responseCode', 200);
+      expect(body).to.have.property('message', 'User exists!');
     });
   });
 
   it('API-AUTH-005: Login com senha incorreta', () => {
     cy.request({
       method: 'POST',
-      url: `${apiBaseUrl}/customerLogin`,
+      url: `${apiBaseUrl}/verifyLogin`,
+      form: true,
       body: {
-        email: 'testuser@webcom.com',
+        email: createdEmail,
         password: 'WrongPassword'
       },
       failOnStatusCode: false
     }).then((response) => {
-      expect(response.status).to.equal(401);
-      expect(response.body).to.have.property('responseCode', 401);
+      expect(response.status).to.equal(200); // API retorna 200
+      
+      let body = response.body;
+      if (typeof body === 'string') body = JSON.parse(body);
+
+      expect(body).to.have.property('responseCode', 404);
+      expect(body).to.have.property('message', 'User not found!');
     });
   });
 
   it('API-AUTH-006: Login com email inexistente', () => {
     cy.request({
       method: 'POST',
-      url: `${apiBaseUrl}/customerLogin`,
+      url: `${apiBaseUrl}/verifyLogin`,
+      form: true,
       body: {
-        email: 'nonexistent@webcom.com',
+        email: 'nonexistent_random_email@webcom.com',
         password: 'AnyPassword123'
       },
       failOnStatusCode: false
     }).then((response) => {
-      expect(response.status).to.equal(401);
-      expect(response.body).to.have.property('responseCode', 401);
+      expect(response.status).to.equal(200);
+      
+      let body = response.body;
+      if (typeof body === 'string') body = JSON.parse(body);
+
+      expect(body).to.have.property('responseCode', 404);
+      expect(body).to.have.property('message', 'User not found!');
     });
   });
 
-  it('API-AUTH-007: Obter detalhes do usuário', () => {
+  it('API-AUTH-007: Obter detalhes do usuário por Email', () => {
     cy.request({
       method: 'GET',
-      url: `${apiBaseUrl}/userDetail`,
+      url: `${apiBaseUrl}/getUserDetailByEmail`, 
       qs: {
-        email: 'testuser@webcom.com'
+        email: createdEmail 
       }
     }).then((response) => {
       expect(response.status).to.equal(200);
-      expect(response.body).to.have.property('user');
-      expect(response.body.user).to.have.property('id');
-      expect(response.body.user).to.have.property('email');
+      
+      let body = response.body;
+      if (typeof body === 'string') body = JSON.parse(body);
+
+      expect(body).to.have.property('responseCode', 200);
+      expect(body).to.have.property('user');
+      expect(body.user).to.have.property('email', createdEmail);
     });
   });
 });

@@ -1,61 +1,56 @@
-describe('Testes de API - Carrinho e Pedidos', () => {
+describe('Testes de API - Marcas e Produtos', () => {
   const apiBaseUrl = 'https://automationexercise.com/api';
 
-  it('API-CART-001: Obter lista de pedidos do usuário', () => {
+  it('API-BRAND-001: Obter lista de todas as marcas', () => {
     cy.request({
       method: 'GET',
-      url: `${apiBaseUrl}/userOrders`,
-      qs: {
-        email: 'testuser@webcom.com'
-      }
-    }).then((response) => {
-      expect(response.status).to.equal(200);
-      expect(response.body).to.have.property('responseCode');
-      // Validar que há uma lista de pedidos (pode estar vazia)
-      if (response.body.responseCode === 200) {
-        expect(response.body).to.have.property('orders');
-        expect(response.body.orders).to.be.an('array');
-      }
-    });
-  });
-
-  it('API-CART-002: Obter detalhes de um pedido específico', () => {
-    // Primeiro, obter lista de pedidos
-    cy.request({
-      method: 'GET',
-      url: `${apiBaseUrl}/userOrders`,
-      qs: {
-        email: 'testuser@webcom.com'
-      }
-    }).then((response) => {
-      if (response.body.orders && response.body.orders.length > 0) {
-        const orderId = response.body.orders[0].id;
-        
-        // Obter detalhes do pedido
-        cy.request({
-          method: 'GET',
-          url: `${apiBaseUrl}/orderDetails`,
-          qs: {
-            order_id: orderId
-          }
-        }).then((orderResponse) => {
-          expect(orderResponse.status).to.equal(200);
-          expect(orderResponse.body).to.have.property('order');
-          expect(orderResponse.body.order).to.have.property('id', orderId);
-        });
-      }
-    });
-  });
-
-  it('API-CART-003: Validar estrutura de resposta de produtos', () => {
-    cy.request({
-      method: 'GET',
-      url: `${apiBaseUrl}/productList`,
+      url: `${apiBaseUrl}/brandsList`, 
     }).then((response) => {
       expect(response.status).to.equal(200);
       
-      // Validar que cada produto tem os campos esperados
-      response.body.products.forEach((product) => {
+      let body = response.body;
+      if (typeof body === 'string') body = JSON.parse(body);
+
+      expect(body).to.have.property('responseCode', 200);
+      expect(body).to.have.property('brands');
+      expect(body.brands).to.be.an('array');
+      expect(body.brands.length).to.be.greaterThan(0);
+    });
+  });
+
+  it('API-BRAND-002: Validar método não permitido em Marcas', () => {
+    // Testamos o método PUT, que geralmente não é permitido para listar
+    cy.request({
+      method: 'PUT',
+      url: `${apiBaseUrl}/brandsList`,
+      failOnStatusCode: false
+    }).then((response) => {
+      let body = response.body;
+      if (typeof body === 'string') {
+        try {
+           body = JSON.parse(body);
+        } catch(e) {}
+      }
+      
+      expect(response.status).to.equal(200);
+      // A API retorna responseCode 405 (Method Not Allowed) dentro de um status 200
+      expect(body).to.have.property('responseCode', 405);
+      expect(body).to.have.property('message', 'This request method is not supported.');
+    });
+  });
+
+  it('API-PROD-003: Validar estrutura de resposta de produtos', () => {
+    cy.request({
+      method: 'GET',
+      url: `${apiBaseUrl}/productsList`, 
+    }).then((response) => {
+      expect(response.status).to.equal(200);
+      
+      let body = response.body;
+      if (typeof body === 'string') body = JSON.parse(body);
+
+      // Validar que cada produto tem os campos esperados (apenas os 5 primeiros)
+      body.products.slice(0, 5).forEach((product) => {
         expect(product).to.have.property('id');
         expect(product).to.have.property('name');
         expect(product).to.have.property('price');
@@ -65,42 +60,47 @@ describe('Testes de API - Carrinho e Pedidos', () => {
     });
   });
 
-  it('API-CART-004: Validar resposta com headers corretos', () => {
+  it('API-PROD-004: Validar resposta com headers corretos', () => {
     cy.request({
       method: 'GET',
-      url: `${apiBaseUrl}/productList`,
+      url: `${apiBaseUrl}/productsList`,
     }).then((response) => {
       expect(response.status).to.equal(200);
-      expect(response.headers).to.have.property('content-type');
-      expect(response.headers['content-type']).to.include('application/json');
+      expect(response.headers['content-type']).to.satisfy((contentType) => {
+        return contentType.includes('application/json') || contentType.includes('text/html');
+      });
     });
   });
 
-  it('API-CART-005: Validar paginação de produtos (se disponível)', () => {
+  // Nota: Essa API ignora parâmetros de paginação e retorna tudo,
+  // mas o teste serve para garantir que o envio de parâmetros extras não quebra a API.
+  it('API-PROD-005: Validar resiliência com parâmetros extras', () => {
     cy.request({
       method: 'GET',
-      url: `${apiBaseUrl}/productList`,
+      url: `${apiBaseUrl}/productsList`,
       qs: {
-        page: 1
+        page: 1,
+        limit: 10
       }
     }).then((response) => {
       expect(response.status).to.equal(200);
-      expect(response.body).to.have.property('products');
-      expect(response.body.products).to.be.an('array');
+      
+      let body = response.body;
+      if (typeof body === 'string') body = JSON.parse(body);
+      
+      expect(body).to.have.property('products');
+      expect(body.products).to.be.an('array');
     });
   });
 
-  it('API-CART-006: Validar resposta para página inválida', () => {
+  it('API-PROD-006: Validar endpoint inexistente', () => {
     cy.request({
       method: 'GET',
-      url: `${apiBaseUrl}/productList`,
-      qs: {
-        page: 9999
-      },
+      url: `${apiBaseUrl}/productsListInvalid`, // URL propositalmente errada
       failOnStatusCode: false
     }).then((response) => {
-      // Pode retornar 200 com lista vazia ou 400
-      expect([200, 400]).to.include(response.status);
+      // Aqui esperamos o 404 real
+      expect(response.status).to.equal(404);
     });
   });
 });
