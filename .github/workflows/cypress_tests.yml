@@ -27,8 +27,7 @@ jobs:
           spec: cypress/e2e/ui/*.cy.js
           browser: chrome
 
-          start: npm test
-          wait-on: 'http://localhost:3000'
+
           
       - name: Run Cypress API Tests
         uses: cypress-io/github-action@v6
